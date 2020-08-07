@@ -106,16 +106,17 @@ func (s *CPUStats) Gather(acc telegraf.Accumulator) error {
 		}
 
 		fieldsG := map[string]interface{}{
-			"usage_user":       100 * (cts.User - lastCts.User - (cts.Guest - lastCts.Guest)) / totalDelta,
-			"usage_system":     100 * (cts.System - lastCts.System) / totalDelta,
-			"usage_idle":       100 * (cts.Idle - lastCts.Idle) / totalDelta,
-			"usage_nice":       100 * (cts.Nice - lastCts.Nice - (cts.GuestNice - lastCts.GuestNice)) / totalDelta,
-			"usage_iowait":     100 * (cts.Iowait - lastCts.Iowait) / totalDelta,
-			"usage_irq":        100 * (cts.Irq - lastCts.Irq) / totalDelta,
-			"usage_softirq":    100 * (cts.Softirq - lastCts.Softirq) / totalDelta,
-			"usage_steal":      100 * (cts.Steal - lastCts.Steal) / totalDelta,
-			"usage_guest":      100 * (cts.Guest - lastCts.Guest) / totalDelta,
-			"usage_guest_nice": 100 * (cts.GuestNice - lastCts.GuestNice) / totalDelta,
+			"usage_utilization": 100 - (100 * (cts.Idle - lastCts.Idle) / totalDelta),
+			"usage_user":        100 * (cts.User - lastCts.User - (cts.Guest - lastCts.Guest)) / totalDelta,
+			"usage_system":      100 * (cts.System - lastCts.System) / totalDelta,
+			"usage_idle":        100 * (cts.Idle - lastCts.Idle) / totalDelta,
+			"usage_nice":        100 * (cts.Nice - lastCts.Nice - (cts.GuestNice - lastCts.GuestNice)) / totalDelta,
+			"usage_iowait":      100 * (cts.Iowait - lastCts.Iowait) / totalDelta,
+			"usage_irq":         100 * (cts.Irq - lastCts.Irq) / totalDelta,
+			"usage_softirq":     100 * (cts.Softirq - lastCts.Softirq) / totalDelta,
+			"usage_steal":       100 * (cts.Steal - lastCts.Steal) / totalDelta,
+			"usage_guest":       100 * (cts.Guest - lastCts.Guest) / totalDelta,
+			"usage_guest_nice":  100 * (cts.GuestNice - lastCts.GuestNice) / totalDelta,
 		}
 		if s.ReportActive {
 			fieldsG["usage_active"] = 100 * (active - lastActive) / totalDelta
