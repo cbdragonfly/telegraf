@@ -2,7 +2,10 @@ package diskio
 
 import (
 	"fmt"
+	"os/exec"
+	"reflect"
 	"regexp"
+	"strconv"
 	"strings"
 
 	"github.com/influxdata/telegraf"
@@ -103,6 +106,9 @@ func (s *DiskIO) Gather(acc telegraf.Accumulator) error {
 		return fmt.Errorf("error getting disk io info: %s", err.Error())
 	}
 
+	keys := reflect.ValueOf(diskio).MapKeys()
+	strKeys := make([]string, len(keys))
+
 	for _, io := range diskio {
 
 		match := false
@@ -148,13 +154,59 @@ func (s *DiskIO) Gather(acc telegraf.Accumulator) error {
 			"io_time":          io.IoTime,
 			"weighted_io_time": io.WeightedIO,
 			"iops_in_progress": io.IopsInProgress,
-			"merged_reads":     io.MergedReadCount,
-			"merged_writes":    io.MergedWriteCount,
 		}
+
+		for i := 0; i < len(keys); i++ {
+			strKeys[i] = keys[i].String()
+			if strKeys[i] == io.Name {
+				iops_read, iops_wrtn := getIops(io.Name)
+				fields["iops_read"] = iops_read
+				fields["iops_write"] = iops_wrtn
+			}
+		}
+
 		acc.AddCounter("diskio", fields, tags)
 	}
 
 	return nil
+}
+
+func getIops(devName string) (uint64, uint64) {
+
+	const BYTE = 1024
+	var ReadIOPS, WriteIOPS uint64
+
+	r, _ := regexp.Compile("([a-z]+)")
+	index := r.FindStringIndex(devName)[1]
+
+	devName = devName[:index]
+
+	cmd := "iostat | grep " + devName + " |awk '{print $3, $4}'"
+
+	out, err := exec.Command("sh", "-c", cmd).Output()
+
+	if err != nil {
+		return ReadIOPS, WriteIOPS
+	}
+
+	if len(out) == 0 {
+		return ReadIOPS, WriteIOPS
+	}
+
+	s := strings.Split(string(out), " ")
+
+	s[0] = strings.TrimSpace(s[0])
+	s[1] = strings.TrimSpace(s[1])
+	s0, _ := strconv.ParseFloat(s[0], 64)
+	s1, _ := strconv.ParseFloat(s[1], 64)
+
+	readBytes := s0 * BYTE
+	writeBytes := s1 * BYTE
+
+	ReadIOPS = uint64(readBytes)
+	WriteIOPS = uint64(writeBytes)
+
+	return ReadIOPS, WriteIOPS
 }
 
 func (s *DiskIO) diskName(devName string) (string, []string) {
