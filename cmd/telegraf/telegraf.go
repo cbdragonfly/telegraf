@@ -108,14 +108,14 @@ func reloadLoop(
 			}
 		}()
 
-		err := RunAgent(ctx, inputFilters, outputFilters)
+		err := runAgent(ctx, inputFilters, outputFilters)
 		if err != nil && err != context.Canceled {
 			log.Fatalf("E! [telegraf] Error running agent: %v", err)
 		}
 	}
 }
 
-func RunAgent(ctx context.Context,
+func runAgent(ctx context.Context,
 	inputFilters []string,
 	outputFilters []string,
 ) error {
