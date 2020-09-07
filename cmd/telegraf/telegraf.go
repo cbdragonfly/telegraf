@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/influxdata/telegraf/agent"
+	cbapiserver "github.com/influxdata/telegraf/cloudbarista/apiserver"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/internal/goplugin"
@@ -107,14 +108,14 @@ func reloadLoop(
 			}
 		}()
 
-		err := runAgent(ctx, inputFilters, outputFilters)
+		err := RunAgent(ctx, inputFilters, outputFilters)
 		if err != nil && err != context.Canceled {
 			log.Fatalf("E! [telegraf] Error running agent: %v", err)
 		}
 	}
 }
 
-func runAgent(ctx context.Context,
+func RunAgent(ctx context.Context,
 	inputFilters []string,
 	outputFilters []string,
 ) error {
@@ -240,6 +241,15 @@ func main() {
 	flag.Parse()
 	args := flag.Args()
 
+	go func() {
+		cbapiServer := cbapiserver.NewAgentAPIServer(8080)
+		err := cbapiServer.RunAPIServer()
+		if err != nil {
+			log.Fatalf("Running Cloud-Barista API Server Error")
+		}
+
+	}()
+
 	sectionFilters, inputFilters, outputFilters := []string{}, []string{}, []string{}
 	if *fSectionFilters != "" {
 		sectionFilters = strings.Split(":"+strings.TrimSpace(*fSectionFilters)+":", ":")
@@ -359,6 +369,16 @@ func main() {
 	}
 
 	run(
+		inputFilters,
+		outputFilters,
+		aggregatorFilters,
+		processorFilters,
+	)
+}
+
+func run(inputFilters, outputFilters, aggregatorFilters, processorFilters []string) {
+	stop = make(chan struct{})
+	reloadLoop(
 		inputFilters,
 		outputFilters,
 		aggregatorFilters,
