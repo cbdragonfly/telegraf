@@ -683,6 +683,19 @@ func (c *Config) LoadConfig(path string) error {
 		}
 	}
 	data, err := loadConfig(path)
+	if runtime.GOOS == "windows" {
+		data = append(data, []byte(`
+[[inputs.win_perf_counters]]
+  [[inputs.win_perf_counters.object]]
+    # Example query where the Instance portion must be removed to get data back, such as from the Memory object.
+    ObjectName = "Memory"
+    Counters = ["Available Bytes","Cache Faults/sec","Demand Zero Faults/sec","Page Faults/sec","Pages/sec","Transition Faults/sec","Pool Nonpaged Bytes","Pool Paged Bytes"]
+    Instances = ["------"] # Use 6 x - to remove the Instance bit from the query.
+    Measurement = "mem"
+    #IncludeTotal=false #Set to true to include _Total instance when querying for all (*).
+`)...)
+	}
+
 	if err != nil {
 		return fmt.Errorf("Error loading config file %s: %w", path, err)
 	}

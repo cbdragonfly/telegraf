@@ -437,6 +437,22 @@ func (m *Win_PerfCounters) Gather(acc telegraf.Accumulator) error {
 		if len(instance.instance) > 0 {
 			tags["instance"] = instance.instance
 		}
+		if instance.name == "mem" {
+			fields["cached"] = fields["Cache_Faults_persec"].(float32) * 60
+			fields["shared"] = fields["Transition_Faults_persec"].(float32) * 60
+			fields["buffered"] = fields["Pool_Paged_Bytes"]
+			fields["free"] = fields["Pool_Nonpaged_Bytes"]
+			fields["active"] = fields["Pages_persec"].(float32) * 60
+			delete(fields, "Available_Bytes")
+			delete(fields, "Cache_Faults_persec")
+			delete(fields, "Demand_Zero_Faults_persec")
+			delete(fields, "Page_Faults_persec")
+			delete(fields, "Page_Faults_persec")
+			delete(fields, "Pages_persec")
+			delete(fields, "Transition_Faults_persec")
+			delete(fields, "Pool_Nonpaged_Bytes")
+			delete(fields, "Pool_Paged_Bytes")
+		}
 		acc.AddFields(instance.name, fields, tags, timestamp)
 	}
 

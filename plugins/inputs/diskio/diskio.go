@@ -5,6 +5,7 @@ import (
 	"os/exec"
 	"reflect"
 	"regexp"
+	"runtime"
 	"strconv"
 	"strings"
 
@@ -156,12 +157,14 @@ func (s *DiskIO) Gather(acc telegraf.Accumulator) error {
 			"iops_in_progress": io.IopsInProgress,
 		}
 
-		for i := 0; i < len(keys); i++ {
-			strKeys[i] = keys[i].String()
-			if strKeys[i] == io.Name {
-				iops_read, iops_wrtn := getIops(io.Name)
-				fields["iops_read"] = iops_read
-				fields["iops_write"] = iops_wrtn
+		if runtime.GOOS != "windows" {
+			for i := 0; i < len(keys); i++ {
+				strKeys[i] = keys[i].String()
+				if strKeys[i] == io.Name {
+					iops_read, iops_wrtn := getIops(io.Name)
+					fields["iops_read"] = iops_read
+					fields["iops_write"] = iops_wrtn
+				}
 			}
 		}
 

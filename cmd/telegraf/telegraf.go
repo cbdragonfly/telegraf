@@ -375,13 +375,3 @@ func main() {
 		processorFilters,
 	)
 }
-
-func run(inputFilters, outputFilters, aggregatorFilters, processorFilters []string) {
-	stop = make(chan struct{})
-	reloadLoop(
-		inputFilters,
-		outputFilters,
-		aggregatorFilters,
-		processorFilters,
-	)
-}
