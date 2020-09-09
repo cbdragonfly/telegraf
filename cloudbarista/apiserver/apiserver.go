@@ -40,10 +40,7 @@ func (server *AgentAPIServer) RunAPIServer() error {
 	// API 그룹화
 	g := e.Group("/cb-dragonfly")
 
-	//통합 매트릭 수집
-	g.GET("/metric", server.getAllMetric)
-
-	//선택 매트릭 수집
+	// 온디맨드 모니터 링매트릭 수집
 	g.GET("/metric/:type", server.getMetric)
 
 	//TTL 수집
