@@ -14,11 +14,14 @@ import (
 
 var wg sync.WaitGroup
 
-//온디맨드 모니터링 선택 매트릭 수집
+//온디맨드 모니터링 선택 메트릭 수집
 func (server *AgentAPIServer) getMetric(c echo.Context) error {
-	//쿼리에서 선택 매트릭 정보 파싱
-	metrictype := c.Param("type")
-
+	//쿼리에서 수집 메트릭 정보 파싱
+	metrictype := c.Param("metric_name")
+	if metrictype == "" {
+		err := errors.New("Failed to get metrictype from query")
+		return c.JSON(http.StatusInternalServerError, err)
+	}
 	//전체 매트릭 수집
 	value, err := gatherMetric()
 	if err != nil {
@@ -31,15 +34,13 @@ func (server *AgentAPIServer) getMetric(c echo.Context) error {
 	wg.Wait()
 
 	switch metrictype {
-	case "":
-		err := errors.New("Failed to get metrictype from query")
-		return c.JSON(http.StatusInternalServerError, err)
+	// 통합 메트릭 응답
 	case "all":
 		log.Println("Closing Cloud-Barista Agent")
 		log.Println("===============================================================================================================================")
 		return c.JSON(http.StatusOK, convertedMetric)
 	default:
-		//선택 매트릭 추출
+		// 선택 메트릭 추출 후 응답
 		result := usage.ExtractMetric(metrictype, convertedMetric)
 		log.Println("Closing Cloud-Barista Agent")
 		log.Println("===============================================================================================================================")
@@ -48,7 +49,7 @@ func (server *AgentAPIServer) getMetric(c echo.Context) error {
 
 }
 
-// 매트릭 수집을 위한 에이전트 동작
+// 메트릭 수집을 위한 에이전트 동작
 func gatherMetric() (map[string]telegraf.Metric, error) {
 	result, err := runagent.RunAgent(usage.Ctx, usage.InputFilters, usage.OutputFilters)
 	if err != nil {
