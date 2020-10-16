@@ -3,13 +3,14 @@ package cbagent
 import (
 	"errors"
 	"github.com/influxdata/telegraf"
-	"log"
-	"net/http"
-	"sync"
-
 	runagent "github.com/influxdata/telegraf/cloudbarista/cbagent"
+	"github.com/influxdata/telegraf/cloudbarista/mcis"
 	"github.com/influxdata/telegraf/cloudbarista/usage"
 	"github.com/labstack/echo"
+	"log"
+	"net/http"
+	"reflect"
+	"sync"
 )
 
 var wg sync.WaitGroup
@@ -56,4 +57,15 @@ func gatherMetric() (map[string]telegraf.Metric, error) {
 		err = errors.New("Running CBAgent Error")
 	}
 	return result, err
+}
+
+func (server *AgentAPIServer) mcisMetric(c echo.Context) error {
+	mcis.CleanMCISMetric()
+	metrictype := c.Param("metric_name")
+	if metrictype == "" {
+		err := errors.New("Failed to get metrictype from query")
+		return c.JSON(http.StatusInternalServerError, err)
+	}
+	reflect.ValueOf(server.MCISAgent[mcis.MCIS]).MethodByName(metrictype).Call([]reflect.Value{reflect.ValueOf(c)})
+	return nil
 }
