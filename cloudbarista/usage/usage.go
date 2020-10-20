@@ -14,6 +14,26 @@ type CBMetricType struct {
 	Timestamp int64
 }
 
+type CBMCISMetric struct {
+	Result  string `json:"result"`
+	Unit    string `json:"unit"`
+	Desc    string `json:"desc"`
+	Elapsed string `json:"elapsed"`
+	SpecId  string `json:"specid"`
+}
+
+type Request struct {
+	Host string `json:"host"`
+	Spec string `json:"spec"`
+}
+
+type MRequest struct {
+	Multihost []Request `json:"multihost"`
+}
+type MultiInfo struct {
+	ResultArray []CBMCISMetric `json:"resultarray"`
+}
+
 var (
 	FConfig          = flag.String("Config", "", "configuration file to load")
 	FConfigDirectory = flag.String("Config-directory", "",
@@ -51,3 +71,5 @@ func ToCBMetric(insert map[string]telegraf.Metric) map[string]CBMetricType {
 	}
 	return result
 }
+
+var Content CBMCISMetric
