@@ -1,22 +1,11 @@
-package main
+package push
 
 import (
 	"context"
 	"errors"
 	"flag"
 	"fmt"
-	"log"
-	"net/http"
-	_ "net/http/pprof" // Comment this line to disable pprof endpoint.
-	"os"
-	"os/signal"
-	"sort"
-	"strings"
-	"syscall"
-	"time"
-
 	"github.com/influxdata/telegraf/agent"
-	cbapiserver "github.com/influxdata/telegraf/cloudbarista/apiserver"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/internal/goplugin"
@@ -27,6 +16,15 @@ import (
 	"github.com/influxdata/telegraf/plugins/outputs"
 	_ "github.com/influxdata/telegraf/plugins/outputs/all"
 	_ "github.com/influxdata/telegraf/plugins/processors/all"
+	"log"
+	"net/http"
+	_ "net/http/pprof" // Comment this line to disable pprof endpoint.
+	"os"
+	"os/signal"
+	"sort"
+	"strings"
+	"syscall"
+	"time"
 )
 
 // If you update these, update usage.go and usage_windows.go
@@ -83,6 +81,7 @@ func reloadLoop(
 	outputFilters []string,
 	aggregatorFilters []string,
 	processorFilters []string,
+	pushModuleChan chan bool,
 ) {
 	reload := make(chan bool, 1)
 	reload <- true
@@ -94,6 +93,16 @@ func reloadLoop(
 		signals := make(chan os.Signal, 1)
 		signal.Notify(signals, os.Interrupt, syscall.SIGHUP,
 			syscall.SIGTERM, syscall.SIGINT)
+
+		go func() {
+			select {
+			case pushModuleTrigger := <-pushModuleChan:
+				if !pushModuleTrigger {
+					cancel()
+				}
+			}
+		}()
+
 		go func() {
 			select {
 			case sig := <-signals:
@@ -236,19 +245,10 @@ func formatFullVersion() string {
 	return strings.Join(parts, " ")
 }
 
-func main() {
+func startPushMonitoring(pushModuleChan chan bool) {
 	flag.Usage = func() { usageExit(0) }
 	flag.Parse()
 	args := flag.Args()
-
-	go func() {
-		cbapiServer := cbapiserver.NewAgentAPIServer(8080)
-		err := cbapiServer.RunAPIServer()
-		if err != nil {
-			log.Fatalf("Running Cloud-Barista API Server Error")
-		}
-
-	}()
 
 	sectionFilters, inputFilters, outputFilters := []string{}, []string{}, []string{}
 	if *fSectionFilters != "" {
@@ -368,10 +368,36 @@ func main() {
 		log.Println("Telegraf version already configured to: " + internal.Version())
 	}
 
+	fmt.Println("here is before run loop")
 	run(
 		inputFilters,
 		outputFilters,
 		aggregatorFilters,
 		processorFilters,
+		pushModuleChan,
 	)
+}
+
+func StartPushController(pushControllerChan chan bool, pushModuleChan chan bool) {
+	for {
+		select {
+		case controllerTrigger := <-pushControllerChan:
+			switch controllerTrigger {
+			case false:
+				pushModuleChan <- false
+				break
+			case true:
+				pushModuleChan <- true
+				go func() {
+					select {
+					case pushModuleTrigger := <-pushModuleChan:
+						if pushModuleTrigger {
+							startPushMonitoring(pushModuleChan)
+						}
+					}
+				}()
+				break
+			}
+		}
+	}
 }

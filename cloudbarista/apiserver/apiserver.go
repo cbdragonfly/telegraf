@@ -2,30 +2,36 @@ package cbagent
 
 import (
 	"context"
-	"github.com/influxdata/telegraf/cloudbarista/mcis"
-	"net/http"
-
 	cbagent "github.com/influxdata/telegraf/agent"
+	"github.com/influxdata/telegraf/cloudbarista/mcis"
 	"github.com/influxdata/telegraf/cloudbarista/usage"
 	"github.com/labstack/echo"
 	"github.com/labstack/echo/middleware"
 	"github.com/sirupsen/logrus"
+	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
 )
 
 type AgentAPIServer struct {
-	listenPort int
-	a          *cbagent.Agent
-	MCISAgent  map[string]interface{}
+	listenPort         int
+	a                  *cbagent.Agent
+	MCISAgent          map[string]interface{}
+	pushControllerChan chan bool
+	isPushModuleOn     bool
 }
 
 // API 서버 생성
-func NewAgentAPIServer(port int) AgentAPIServer {
+func NewAgentAPIServer(port int, pushControllerChan chan bool) AgentAPIServer {
 	var mcisAgent = map[string]interface{}{
 		mcis.MCIS: &mcis.MCISAgent{},
 	}
 	return AgentAPIServer{
-		listenPort: port,
-		MCISAgent:  mcisAgent,
+		listenPort:         port,
+		MCISAgent:          mcisAgent,
+		pushControllerChan: pushControllerChan,
+		isPushModuleOn:     false,
 	}
 }
 
@@ -49,8 +55,25 @@ func (server *AgentAPIServer) RunAPIServer() error {
 	//TTL 수집
 	g.GET("/mcis/metric/:metric_name", server.mcisMetric)
 
+	// Push Monitoring On
+	g.POST("/agent/monitoring/push", server.handlePushMonitoring)
+	// Push Monitoring Off
+	g.DELETE("/agent/monitoring/push", server.handlePushMonitoring)
 	//동작
-	if err := e.Start(":8080"); err != nil {
+	go func() {
+		if err := e.Start(":8888"); err != nil {
+			logrus.Fatal(err)
+		}
+	}()
+
+	signals := make(chan os.Signal, 1)
+	signal.Notify(signals, os.Interrupt, syscall.SIGHUP,
+		syscall.SIGTERM, syscall.SIGINT)
+	<-signals
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	if err := e.Shutdown(ctx); err != nil {
 		logrus.Fatal(err)
 	}
 	return nil

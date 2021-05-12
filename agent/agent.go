@@ -781,9 +781,11 @@ func (a *Agent) runOutputs(
 		}
 	}
 
-	log.Println("I! [agent] Hang on, flushing any cached metrics before shutdown")
 	cancel()
 	wg.Wait()
+	log.Println("I! [agent] Hang on, flushing any cached metrics before shutdown")
+	log.Println("Closing Cloud-Barista Agent")
+	log.Println("===============================================================================================================================")
 
 	return nil
 }
