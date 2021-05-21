@@ -2,13 +2,14 @@
 
 package push
 
-func run(inputFilters, outputFilters, aggregatorFilters, processorFilters []string, pushModuleChan chan bool) {
-	stop = make(chan struct{})
-	reloadLoop(
+func (pushController *PushController) run(inputFilters, outputFilters, aggregatorFilters, processorFilters []string) {
+	//stop = make(chan struct{})
+	pushController.reloadLoop(
 		inputFilters,
 		outputFilters,
 		aggregatorFilters,
 		processorFilters,
-		pushModuleChan,
+		//pushController.pushModuleChan,
+		//pushController.signals,
 	)
 }

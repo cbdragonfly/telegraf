@@ -12,7 +12,6 @@ import (
 	"github.com/kardianos/service"
 )
 
-// TODO: 에이전트 PUSH ON/OFF 윈도우즈 지원 관련 테스트 및 코드 수정 필요
 func run(inputFilters, outputFilters, aggregatorFilters, processorFilters []string) {
 	if runtime.GOOS == "windows" && windowsRunAsService() {
 		runAsWindowsService(
@@ -22,8 +21,8 @@ func run(inputFilters, outputFilters, aggregatorFilters, processorFilters []stri
 			processorFilters,
 		)
 	} else {
-		main.stop = make(chan struct{})
-		main.reloadLoop(
+		stop = make(chan struct{})
+		reloadLoop(
 			inputFilters,
 			outputFilters,
 			aggregatorFilters,

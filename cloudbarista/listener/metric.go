@@ -1,4 +1,4 @@
-package cbagent
+package listener
 
 import (
 	"errors"
@@ -15,7 +15,7 @@ import (
 )
 
 //온디맨드 모니터링 선택 메트릭 수집
-func (server *AgentAPIServer) getMetric(c echo.Context) error {
+func (server *AgentPullLister) getMetric(c echo.Context) error {
 	//쿼리에서 수집 메트릭 정보 파싱
 	metrictype := c.Param("metric_name")
 	if metrictype == "" {
@@ -56,7 +56,7 @@ func gatherMetric() (map[string]telegraf.Metric, error) {
 	return result, err
 }
 
-func (server *AgentAPIServer) mcisMetric(c echo.Context) error {
+func (server *AgentPullLister) mcisMetric(c echo.Context) error {
 	mcis.CleanMCISMetric()
 	metrictype := c.Param("metric_name")
 	if metrictype == "" {
@@ -67,25 +67,27 @@ func (server *AgentAPIServer) mcisMetric(c echo.Context) error {
 	return nil
 }
 
-func (server *AgentAPIServer) handlePushMonitoring(c echo.Context) error {
+func (server *AgentPullLister) handlePushMonitoring(c echo.Context) error {
 	switch c.Request().Method {
 	case push.METHOD_CREATE:
-		if server.isPushModuleOn {
+		if server.IsPushModuleOn {
 			return c.JSON(http.StatusInternalServerError, "Push Monitoring Already Activated")
 		}
 		log.Println("===============================================================================================================================")
 		log.Printf("I! Starting Cloud-Barista Push Monitoring Telegraf Agent")
-		server.isPushModuleOn = true
+		server.IsPushModuleOn = true
 		server.pushControllerChan <- true
 		return c.JSON(http.StatusOK, fmt.Sprintf("Push Monitoring Started && Pull Monitoring Stopped"))
-	default:
-		if !server.isPushModuleOn {
+	case push.METHOD_DELETE:
+		if !server.IsPushModuleOn {
 			return c.JSON(http.StatusInternalServerError, "Push Monitoring Already DeActivated")
 		}
 		log.Println("===============================================================================================================================")
 		log.Printf("I! Stopping Cloud-Barista Push Monitoring Telegraf Agent")
-		server.isPushModuleOn = false
+		server.IsPushModuleOn = false
 		server.pushControllerChan <- false
 		return c.JSON(http.StatusOK, fmt.Sprintf("Push Monitoring Stopped && Pull Monitoring Started"))
+	default:
+		return c.JSON(http.StatusBadRequest, "Unsupported Request")
 	}
 }

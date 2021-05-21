@@ -20,7 +20,6 @@ import (
 	"net/http"
 	_ "net/http/pprof" // Comment this line to disable pprof endpoint.
 	"os"
-	"os/signal"
 	"sort"
 	"strings"
 	"syscall"
@@ -74,14 +73,13 @@ var (
 	branch  string
 )
 
-var stop chan struct{}
-
-func reloadLoop(
+func (pushController *PushController) reloadLoop(
 	inputFilters []string,
 	outputFilters []string,
 	aggregatorFilters []string,
 	processorFilters []string,
-	pushModuleChan chan bool,
+	//pushModuleChan chan bool,
+	//signals chan os.Signal,
 ) {
 	reload := make(chan bool, 1)
 	reload <- true
@@ -90,13 +88,9 @@ func reloadLoop(
 
 		ctx, cancel := context.WithCancel(context.Background())
 
-		signals := make(chan os.Signal, 1)
-		signal.Notify(signals, os.Interrupt, syscall.SIGHUP,
-			syscall.SIGTERM, syscall.SIGINT)
-
 		go func() {
 			select {
-			case pushModuleTrigger := <-pushModuleChan:
+			case pushModuleTrigger := <-pushController.pushModuleChan:
 				if !pushModuleTrigger {
 					cancel()
 				}
@@ -105,26 +99,24 @@ func reloadLoop(
 
 		go func() {
 			select {
-			case sig := <-signals:
+			case sig := <-pushController.signals:
 				if sig == syscall.SIGHUP {
 					log.Printf("I! Reloading Telegraf config")
 					<-reload
 					reload <- true
 				}
 				cancel()
-			case <-stop:
-				cancel()
 			}
 		}()
 
-		err := runAgent(ctx, inputFilters, outputFilters)
+		err := pushController.runAgent(ctx, inputFilters, outputFilters)
 		if err != nil && err != context.Canceled {
 			log.Fatalf("E! [telegraf] Error running agent: %v", err)
 		}
 	}
 }
 
-func runAgent(ctx context.Context,
+func (pushController *PushController) runAgent(ctx context.Context,
 	inputFilters []string,
 	outputFilters []string,
 ) error {
@@ -217,12 +209,12 @@ func runAgent(ctx context.Context,
 	return ag.Run(ctx)
 }
 
-func usageExit(rc int) {
+func (pushController *PushController) usageExit(rc int) {
 	fmt.Println(internal.Usage)
 	os.Exit(rc)
 }
 
-func formatFullVersion() string {
+func (pushController *PushController) formatFullVersion() string {
 	var parts = []string{"Telegraf"}
 
 	if version != "" {
@@ -245,8 +237,8 @@ func formatFullVersion() string {
 	return strings.Join(parts, " ")
 }
 
-func startPushMonitoring(pushModuleChan chan bool) {
-	flag.Usage = func() { usageExit(0) }
+func (pushController *PushController) startPushMonitoring() {
+	flag.Usage = func() { pushController.usageExit(0) }
 	flag.Parse()
 	args := flag.Args()
 
@@ -299,7 +291,7 @@ func startPushMonitoring(pushModuleChan chan bool) {
 	if len(args) > 0 {
 		switch args[0] {
 		case "version":
-			fmt.Println(formatFullVersion())
+			fmt.Println(pushController.formatFullVersion())
 			return
 		case "config":
 			config.PrintSampleConfig(
@@ -338,7 +330,7 @@ func startPushMonitoring(pushModuleChan chan bool) {
 		}
 		return
 	case *fVersion:
-		fmt.Println(formatFullVersion())
+		fmt.Println(pushController.formatFullVersion())
 		return
 	case *fSampleConfig:
 		config.PrintSampleConfig(
@@ -368,36 +360,12 @@ func startPushMonitoring(pushModuleChan chan bool) {
 		log.Println("Telegraf version already configured to: " + internal.Version())
 	}
 
-	fmt.Println("here is before run loop")
-	run(
+	pushController.run(
 		inputFilters,
 		outputFilters,
 		aggregatorFilters,
 		processorFilters,
-		pushModuleChan,
+		//pushController.pushModuleChan,
+		//pushController.signals,
 	)
-}
-
-func StartPushController(pushControllerChan chan bool, pushModuleChan chan bool) {
-	for {
-		select {
-		case controllerTrigger := <-pushControllerChan:
-			switch controllerTrigger {
-			case false:
-				pushModuleChan <- false
-				break
-			case true:
-				pushModuleChan <- true
-				go func() {
-					select {
-					case pushModuleTrigger := <-pushModuleChan:
-						if pushModuleTrigger {
-							startPushMonitoring(pushModuleChan)
-						}
-					}
-				}()
-				break
-			}
-		}
-	}
 }
