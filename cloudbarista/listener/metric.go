@@ -6,8 +6,8 @@ import (
 	"github.com/influxdata/telegraf"
 	runagent "github.com/influxdata/telegraf/cloudbarista/cbagent"
 	"github.com/influxdata/telegraf/cloudbarista/mcis"
-	"github.com/influxdata/telegraf/cloudbarista/push"
 	"github.com/influxdata/telegraf/cloudbarista/usage"
+	common "github.com/influxdata/telegraf/cloudbarista/utility"
 	"github.com/labstack/echo"
 	"log"
 	"net/http"
@@ -69,7 +69,7 @@ func (server *AgentPullLister) mcisMetric(c echo.Context) error {
 
 func (server *AgentPullLister) handlePushMonitoring(c echo.Context) error {
 	switch c.Request().Method {
-	case push.METHOD_CREATE:
+	case common.METHOD_CREATE:
 		if server.IsPushModuleOn {
 			return c.JSON(http.StatusInternalServerError, "Push Monitoring Already Activated")
 		}
@@ -78,7 +78,7 @@ func (server *AgentPullLister) handlePushMonitoring(c echo.Context) error {
 		server.IsPushModuleOn = true
 		server.pushControllerChan <- true
 		return c.JSON(http.StatusOK, fmt.Sprintf("Push Monitoring Started && Pull Monitoring Stopped"))
-	case push.METHOD_DELETE:
+	case common.METHOD_DELETE:
 		if !server.IsPushModuleOn {
 			return c.JSON(http.StatusInternalServerError, "Push Monitoring Already DeActivated")
 		}

@@ -1,4 +1,4 @@
-package push
+package main
 
 import (
 	"context"
@@ -16,6 +16,7 @@ import (
 	"github.com/influxdata/telegraf/plugins/outputs"
 	_ "github.com/influxdata/telegraf/plugins/outputs/all"
 	_ "github.com/influxdata/telegraf/plugins/processors/all"
+	"github.com/sirupsen/logrus"
 	"log"
 	"net/http"
 	_ "net/http/pprof" // Comment this line to disable pprof endpoint.
@@ -73,6 +74,8 @@ var (
 	branch  string
 )
 
+var stop chan struct{}
+
 func (pushController *PushController) reloadLoop(
 	inputFilters []string,
 	outputFilters []string,
@@ -100,6 +103,7 @@ func (pushController *PushController) reloadLoop(
 		go func() {
 			select {
 			case sig := <-pushController.signals:
+				logrus.Println("SignalSIgn Gotted")
 				if sig == syscall.SIGHUP {
 					log.Printf("I! Reloading Telegraf config")
 					<-reload

@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"github.com/influxdata/telegraf/cloudbarista/listener"
-	"github.com/influxdata/telegraf/cloudbarista/push"
 	"log"
 	"os"
 	"os/signal"
@@ -12,6 +11,7 @@ import (
 )
 
 var wg sync.WaitGroup
+var CB_Push_Controller PushController
 
 func main() {
 	pushControllerChan := make(chan bool, 1)
@@ -31,7 +31,7 @@ func main() {
 		return
 	}()
 
-	CB_Push_Controller := push.NewAgentPushController(pushControllerChan, pushModuleChan, signals)
+	CB_Push_Controller = NewAgentPushController(pushControllerChan, pushModuleChan, signals)
 	wg.Add(1)
 	go func() {
 		err := CB_Listener.Start()

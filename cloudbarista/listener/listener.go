@@ -71,6 +71,7 @@ func (listener *AgentPullLister) Start() error {
 	for {
 		select {
 		case signal := <-listener.signals:
+			logrus.Println("SignalSIgn Gotted")
 			if signal != syscall.SIGHUP {
 				if err := e.Shutdown(listener.ctx); err != nil {
 					logrus.Fatal(err)

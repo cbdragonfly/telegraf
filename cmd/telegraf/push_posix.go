@@ -1,6 +1,6 @@
 // +build !windows
 
-package push
+package main
 
 func (pushController *PushController) run(inputFilters, outputFilters, aggregatorFilters, processorFilters []string) {
 	//stop = make(chan struct{})
