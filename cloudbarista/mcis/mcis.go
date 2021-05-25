@@ -440,3 +440,16 @@ func CleanMCISMetric() {
 	usage.Content.Desc = ""
 	usage.Content.Result = ""
 }
+
+func InitializeMetricList(mc map[string]string) {
+	mc[CPUS] = CPUS
+	mc[CPUM] = CPUM
+	mc[MEMR] = MEMR
+	mc[MEMW] = MEMW
+	mc[FIOR] = FIOR
+	mc[FIOW] = FIOW
+	mc[DBR] = DBR
+	mc[DBW] = DBW
+	mc[RTT] = RTT
+	mc[MRTT] = MRTT
+}

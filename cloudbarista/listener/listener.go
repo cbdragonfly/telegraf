@@ -20,6 +20,7 @@ type AgentPullLister struct {
 	signals            chan os.Signal
 	ctx                context.Context
 	cancel             context.CancelFunc
+	McisMetric         map[string]string
 }
 
 // Listener 서버 생성
@@ -27,7 +28,8 @@ func NewAgentPullListener(port int, pushControllerChan chan bool, signals chan o
 	var mcisAgent = map[string]interface{}{
 		mcis.MCIS: &mcis.MCISAgent{},
 	}
-	return AgentPullLister{
+	var emptyMcisMetric = map[string]string{}
+	var newAgentPullListener = AgentPullLister{
 		listenPort:         port,
 		MCISAgent:          mcisAgent,
 		pushControllerChan: pushControllerChan,
@@ -35,7 +37,10 @@ func NewAgentPullListener(port int, pushControllerChan chan bool, signals chan o
 		signals:            signals,
 		ctx:                ctx,
 		cancel:             cancel,
+		McisMetric:         emptyMcisMetric,
 	}
+	mcis.InitializeMetricList(newAgentPullListener.McisMetric)
+	return newAgentPullListener
 }
 
 // Listener 동작

@@ -42,6 +42,9 @@ func (server *AgentPullLister) getMetric(c echo.Context) error {
 		result := usage.ExtractMetric(metrictype, convertedMetric)
 		log.Println("Start Closing Cloud-Barista Agent")
 		log.Println("===============================================================================================================================")
+		if len(result) == 0 {
+			return c.JSON(http.StatusBadRequest, "Not Found Metric")
+		}
 		return c.JSON(http.StatusOK, result)
 	}
 
@@ -62,6 +65,15 @@ func (server *AgentPullLister) mcisMetric(c echo.Context) error {
 	if metrictype == "" {
 		err := errors.New("Failed to get metrictype from query")
 		return c.JSON(http.StatusInternalServerError, err)
+	}
+	isServed := false
+	for _, value := range server.McisMetric {
+		if metrictype == value {
+			isServed = true
+		}
+	}
+	if !isServed {
+		return c.JSON(http.StatusBadRequest, "Not Found Metric")
 	}
 	reflect.ValueOf(server.MCISAgent[mcis.MCIS]).MethodByName(metrictype).Call([]reflect.Value{reflect.ValueOf(c)})
 	return nil
