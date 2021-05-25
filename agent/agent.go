@@ -110,7 +110,7 @@ func (a *Agent) Run(ctx context.Context) error {
 	startTime := time.Now()
 
 	log.Printf("D! [agent] Connecting outputs")
-	next, ou, err := a.startOutputs(ctx, a.Config.Outputs)
+	next, ou, err := a.startOutputs(ctx, a.Config.Outputs, false)
 	if err != nil {
 		return err
 	}
@@ -693,18 +693,20 @@ func (a *Agent) push(
 func (a *Agent) startOutputs(
 	ctx context.Context,
 	outputs []*models.RunningOutput,
+	onDemand bool,
 ) (chan<- telegraf.Metric, *outputUnit, error) {
 	src := make(chan telegraf.Metric, 100)
 	unit := &outputUnit{src: src}
 	for _, output := range outputs {
-		err := a.connectOutput(ctx, output)
-		if err != nil {
-			for _, output := range unit.outputs {
-				output.Close()
+		err := a.connectOutput(ctx, output, onDemand)
+		if !onDemand {
+			if err != nil {
+				for _, output := range unit.outputs {
+					output.Close()
+				}
+				return nil, nil, fmt.Errorf("connecting output %s: %w", output.LogName(), err)
 			}
-			return nil, nil, fmt.Errorf("connecting output %s: %w", output.LogName(), err)
 		}
-
 		unit.outputs = append(unit.outputs, output)
 	}
 
@@ -712,21 +714,23 @@ func (a *Agent) startOutputs(
 }
 
 // connectOutputs connects to all outputs.
-func (a *Agent) connectOutput(ctx context.Context, output *models.RunningOutput) error {
+func (a *Agent) connectOutput(ctx context.Context, output *models.RunningOutput, onDemand bool) error {
 	log.Printf("D! [agent] Attempting connection to [%s]", output.LogName())
-	err := output.Output.Connect()
-	if err != nil {
-		log.Printf("E! [agent] Failed to connect to [%s], retrying in 15s, "+
-			"error was '%s'", output.LogName(), err)
-
-		err := internal.SleepContext(ctx, 15*time.Second)
+	if !onDemand {
+		err := output.Output.Connect()
 		if err != nil {
-			return err
-		}
+			log.Printf("E! [agent] Failed to connect to [%s], retrying in 15s, "+
+				"error was '%s'", output.LogName(), err)
 
-		err = output.Output.Connect()
-		if err != nil {
-			return fmt.Errorf("Error connecting to output %q: %w", output.LogName(), err)
+			err := internal.SleepContext(ctx, 15*time.Second)
+			if err != nil {
+				return err
+			}
+
+			err = output.Output.Connect()
+			if err != nil {
+				return fmt.Errorf("Error connecting to output %q: %w", output.LogName(), err)
+			}
 		}
 	}
 	log.Printf("D! [agent] Successfully connected to %s", output.LogName())
@@ -1023,7 +1027,7 @@ func (a *Agent) once(ctx context.Context, wait time.Duration) error {
 	startTime := time.Now()
 
 	log.Printf("D! [agent] Connecting outputs")
-	next, ou, err := a.startOutputs(ctx, a.Config.Outputs)
+	next, ou, err := a.startOutputs(ctx, a.Config.Outputs, false)
 	if err != nil {
 		return err
 	}

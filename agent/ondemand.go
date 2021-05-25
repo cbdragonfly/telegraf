@@ -21,7 +21,6 @@ func (a *Agent) ondemandrunOutputs(
 	jitter := a.Config.Agent.FlushJitter.Duration
 
 	ctx, cancel := context.WithCancel(context.Background())
-
 	for _, output := range unit.outputs {
 		interval := interval
 		// Overwrite agent flush_interval if this plugin has its own.
@@ -85,7 +84,7 @@ func (a *Agent) ondemand(ctx context.Context, wait time.Duration) (map[string]te
 	}
 
 	log.Printf("D! [agent] Connecting outputs")
-	next, ou, err := a.startOutputs(ctx, a.Config.Outputs)
+	next, ou, err := a.startOutputs(ctx, a.Config.Outputs, true)
 	if err != nil {
 		return nil, err
 	}
