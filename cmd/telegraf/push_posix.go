@@ -2,14 +2,12 @@
 
 package main
 
-func (pushController *PushController) run(inputFilters, outputFilters, aggregatorFilters, processorFilters []string) {
+func (pushController *PushController) run() {
 	//stop = make(chan struct{})
 	pushController.reloadLoop(
-		inputFilters,
-		outputFilters,
-		aggregatorFilters,
-		processorFilters,
-		//pushController.pushModuleChan,
-		//pushController.signals,
+		pushController.inputFilters,
+		pushController.outputFilters,
+		pushController.aggregatorFilters,
+		pushController.processorFilters,
 	)
 }

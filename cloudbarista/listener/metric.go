@@ -23,7 +23,7 @@ func (server *AgentPullLister) getMetric(c echo.Context) error {
 		return c.JSON(http.StatusInternalServerError, err)
 	}
 	//전체 매트릭 수집
-	value, err := gatherMetric()
+	value, err := server.gatherMetric()
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, err)
 	}
@@ -51,8 +51,8 @@ func (server *AgentPullLister) getMetric(c echo.Context) error {
 }
 
 // 메트릭 수집을 위한 에이전트 동작
-func gatherMetric() (map[string]telegraf.Metric, error) {
-	result, err := runagent.RunAgent(usage.Ctx, usage.InputFilters, usage.OutputFilters)
+func (server *AgentPullLister) gatherMetric() (map[string]telegraf.Metric, error) {
+	result, err := runagent.RunAgent(*server.Ctx, usage.InputFilters, usage.OutputFilters)
 	if err != nil {
 		err = errors.New("Running CBAgent Error")
 	}
