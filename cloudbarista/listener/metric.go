@@ -3,18 +3,24 @@ package listener
 import (
 	"errors"
 	"fmt"
+	"log"
+	"net/http"
+	"reflect"
+
 	"github.com/influxdata/telegraf"
 	runagent "github.com/influxdata/telegraf/cloudbarista/cbagent"
 	"github.com/influxdata/telegraf/cloudbarista/mcis"
 	"github.com/influxdata/telegraf/cloudbarista/usage"
 	common "github.com/influxdata/telegraf/cloudbarista/utility"
 	"github.com/labstack/echo"
-	"log"
-	"net/http"
-	"reflect"
 )
 
-//온디맨드 모니터링 선택 메트릭 수집
+// doHealthCheck 에이전트 헬스체크
+func (server *AgentPullLister) doHealthCheck(c echo.Context) error {
+	return c.JSON(http.StatusNoContent, nil)
+}
+
+// getMetric 온디맨드 모니터링 선택 메트릭 수집
 func (server *AgentPullLister) getMetric(c echo.Context) error {
 	//쿼리에서 수집 메트릭 정보 파싱
 	metrictype := c.Param("metric_name")
@@ -50,7 +56,7 @@ func (server *AgentPullLister) getMetric(c echo.Context) error {
 
 }
 
-// 메트릭 수집을 위한 에이전트 동작
+// gatherMetric 메트릭 수집을 위한 에이전트 동작
 func (server *AgentPullLister) gatherMetric() (map[string]telegraf.Metric, error) {
 	result, err := runagent.RunAgent(*server.Ctx, usage.InputFilters, usage.OutputFilters)
 	if err != nil {

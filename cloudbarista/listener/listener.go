@@ -2,12 +2,13 @@ package listener
 
 import (
 	"context"
+	"net/http"
+	"os"
+
 	"github.com/influxdata/telegraf/cloudbarista/mcis"
 	"github.com/labstack/echo"
 	"github.com/labstack/echo/middleware"
 	"github.com/sirupsen/logrus"
-	"net/http"
-	"os"
 )
 
 type AgentPullLister struct {
@@ -52,19 +53,24 @@ func (listener *AgentPullLister) Start() error {
 	listener.Echo.GET("/", func(c echo.Context) error {
 		return c.String(http.StatusOK, "Cloud-Barista Telegraf Agent API Server")
 	})
+
 	// API 그룹화
 	g := listener.Echo.Group("/cb-dragonfly")
+
+	// 헬스체크
+	g.GET("/healthcheck", listener.doHealthCheck)
 
 	// 온디맨드 모니터링 매트릭 수집
 	g.GET("/metric/:metric_name", listener.getMetric)
 
-	//TTL 수집
+	// TTL 수집
 	g.GET("/mcis/metric/:metric_name", listener.mcisMetric)
 
 	// Push Monitoring On
 	g.POST("/agent/monitoring/push", listener.handlePushMonitoring)
 	// Push Monitoring Off
 	g.DELETE("/agent/monitoring/push", listener.handlePushMonitoring)
+
 	//동작
 	go func() {
 		if err := listener.Echo.Start(":8888"); err != nil {
