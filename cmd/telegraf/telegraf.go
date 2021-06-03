@@ -231,6 +231,21 @@ func main() {
 	return
 }
 
+func printFilteredGlobalSections(sectionFilters []string) {
+	if sliceContains("global_tags", sectionFilters) {
+		fmt.Printf(globalTagsConfig)
+	}
+}
+
+func sliceContains(name string, list []string) bool {
+	for _, b := range list {
+		if b == name {
+			return true
+		}
+	}
+	return false
+}
+
 func formatFullVersion() string {
 	var parts = []string{"Telegraf"}
 
