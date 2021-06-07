@@ -5,13 +5,13 @@ import (
 	"errors"
 	"fmt"
 	"github.com/influxdata/telegraf/agent"
+	cbUtility "github.com/influxdata/telegraf/cloudbarista/utility"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/logger"
 	_ "github.com/influxdata/telegraf/plugins/aggregators/all"
 	_ "github.com/influxdata/telegraf/plugins/inputs/all"
 	_ "github.com/influxdata/telegraf/plugins/outputs/all"
 	_ "github.com/influxdata/telegraf/plugins/processors/all"
-	"github.com/sirupsen/logrus"
 	"log"
 	_ "net/http/pprof" // Comment this line to disable pprof endpoint.
 	"os"
@@ -38,8 +38,6 @@ func (pushController *PushController) reloadLoop(
 		go func() {
 			select {
 			case sig := <-pushController.signals:
-				logrus.Println("SignalSIgn Gotted")
-				logrus.Println(sig)
 				if sig == syscall.SIGHUP {
 					log.Printf("I! Reloading Telegraf config")
 					<-reload
@@ -47,8 +45,11 @@ func (pushController *PushController) reloadLoop(
 				}
 				cancel()
 			case pushModuleTrigger := <-pushController.pushModuleStopChan:
-				log.Println("PUSHMODULE GOT SIGNAL: STOP")
 				if !pushModuleTrigger {
+					if pushController.isPushOn {
+						pushController.pushCheckChan <- cbUtility.OFF
+					}
+					pushController.isPushOn = cbUtility.OFF
 					cancel()
 				}
 			}
