@@ -6,10 +6,6 @@ import (
 	"runtime"
 )
 
-var FileStr string
-var CommandStr string
-var TargetStr string
-
 func SysCall(cmdStr string) (string, error) {
 	cmd := exec.Command("bash", "-c", cmdStr)
 
@@ -48,4 +44,6 @@ const (
 	METHOD_GET    = "GET"
 	METHOD_PUT    = "PUT"
 	METHOD_PATCH  = "PATCH"
+	ON            = true
+	OFF           = false
 )

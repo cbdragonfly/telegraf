@@ -3,7 +3,9 @@ package main
 import (
 	"flag"
 	"fmt"
+	cbconfig "github.com/influxdata/telegraf/cloudbarista/config"
 	"github.com/influxdata/telegraf/cloudbarista/listener"
+	cbUtility "github.com/influxdata/telegraf/cloudbarista/utility"
 	"github.com/influxdata/telegraf/config"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/internal/goplugin"
@@ -79,6 +81,7 @@ func main() {
 	pushModuleSignals := make(chan os.Signal, 100)
 	pushControllerChan := make(chan bool, 1)
 	pushModuleChan := make(chan bool, 1)
+	pushCheckChan := make(chan bool, 1)
 
 	flag.Usage = func() { usageExit(0) }
 	flag.Parse()
@@ -202,6 +205,9 @@ func main() {
 		log.Println("Telegraf version already configured to: " + internal.Version())
 	}
 
+	cbConfig := cbconfig.NewConfig()
+	cbConfig.LoadConfig(*fConfigDirectory)
+
 	go func() {
 		signal.Notify(pullListenerSignals, os.Interrupt, syscall.SIGHUP,
 			syscall.SIGTERM, syscall.SIGINT)
@@ -211,21 +217,38 @@ func main() {
 	go func() {
 		signal.Notify(pushModuleSignals, os.Interrupt, syscall.SIGHUP,
 			syscall.SIGTERM, syscall.SIGINT)
+		// push 모니터링 Loop 중지
 		<-pushModuleSignals
-		//pushControllerChan <- false
+		// push Controller 중지
+		pushControllerChan <- cbUtility.OFF
 		return
 	}()
 
-	CB_Push_Controller := NewAgentPushController(pushControllerChan, pushModuleChan, pushModuleSignals, inputFilters, outputFilters, aggregatorFilters, processorFilters)
-	CB_Listener := listener.NewAgentPullListener(8888, pushControllerChan, pullListenerSignals)
+	CB_Push_Controller := NewAgentPushController(pushControllerChan, pushModuleChan, pushCheckChan, pushModuleSignals,
+		inputFilters, outputFilters, aggregatorFilters, processorFilters)
+	CB_Listener := listener.NewAgentPullListener(8888, pushModuleChan, pullListenerSignals, pushCheckChan)
+
 	go func() {
 		_ = CB_Listener.Start()
 	}()
-
 	wg.Add(1)
 	go func() {
+		defer wg.Done()
+		for key, value := range cbConfig.Tags {
+			if key == cbconfig.MECHANISM {
+				if value == cbconfig.PUSH {
+					CB_Listener.IsPushOn = cbUtility.ON
+					CB_Push_Controller.isPushOn = cbUtility.ON
+					pushModuleChan <- cbUtility.ON
+				}
+				return
+			}
+		}
+	}()
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
 		CB_Push_Controller.StartPushController()
-		//push.StartPushController(pushControllerChan, pushModuleChan, signals)
 	}()
 	wg.Wait()
 	return
