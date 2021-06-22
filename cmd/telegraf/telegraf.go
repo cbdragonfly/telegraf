@@ -206,7 +206,10 @@ func main() {
 	}
 
 	cbConfig := cbconfig.NewConfig()
-	cbConfig.LoadConfig(*fConfigDirectory)
+	err := cbConfig.LoadConfig(*fConfigDirectory)
+	if err != nil {
+		log.Println(err)
+	}
 
 	go func() {
 		signal.Notify(pullListenerSignals, os.Interrupt, syscall.SIGHUP,

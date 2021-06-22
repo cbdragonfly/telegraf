@@ -38,10 +38,10 @@ if [[ ! -f /etc/default/telegraf ]]; then
     touch /etc/default/telegraf
 fi
 
-# Add .d configuration directory
-if [[ ! -d /etc/telegraf/telegraf.d ]]; then
-    mkdir -p /etc/telegraf/telegraf.d
-fi
+## Add .d configuration directory
+#if [[ ! -d /etc/telegraf/telegraf.d ]]; then
+#    mkdir -p /etc/telegraf/telegraf.d
+#fi
 
 # If 'telegraf.conf' is not present use package's sample (fresh install)
 if [[ ! -f /etc/telegraf/telegraf.conf ]] && [[ -f /etc/telegraf/telegraf.conf.sample ]]; then

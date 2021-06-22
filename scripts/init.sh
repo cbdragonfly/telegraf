@@ -112,7 +112,7 @@ fi
 
 # Configuration file
 config=/etc/telegraf/telegraf.conf
-confdir=/etc/telegraf/telegraf.d
+confdir=/etc/telegraf
 
 # If the daemon is not there, then exit.
 [ -x $daemon ] || exit 5
