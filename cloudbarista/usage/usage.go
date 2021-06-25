@@ -73,3 +73,10 @@ func ToCBMetric(insert map[string]telegraf.Metric) map[string]CBMetricType {
 }
 
 var Content CBMCISMetric
+
+func NewErrMSG(message string) map[string]string {
+	errMsg := map[string]string{
+		"message": message,
+	}
+	return errMsg
+}

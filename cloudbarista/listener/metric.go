@@ -70,20 +70,26 @@ func (listener *AgentPullListener) mcisMetric(c echo.Context) error {
 	mcis.CleanMCISMetric()
 	metrictype := c.Param("metric_name")
 	if metrictype == "" {
-		err := errors.New("Failed to get metrictype from query")
-		return c.JSON(http.StatusInternalServerError, err)
+		return c.JSON(http.StatusInternalServerError, usage.NewErrMSG("Failed to get metrictype from query"))
 	}
 	isServed := false
-	for _, value := range listener.McisMetric {
-		if metrictype == value {
+	for key, _ := range listener.McisMetric {
+		if metrictype == key {
 			isServed = true
 		}
 	}
 	if !isServed {
-		return c.JSON(http.StatusBadRequest, "Not Found Metric")
+		return c.JSON(http.StatusBadRequest, usage.NewErrMSG("Not Found Metric"))
 	}
-	reflect.ValueOf(listener.MCISAgent[mcis.MCIS]).MethodByName(metrictype).Call([]reflect.Value{reflect.ValueOf(c)})
-	return nil
+	result := reflect.ValueOf(listener.MCISAgent[mcis.MCIS]).MethodByName(metrictype).Call([]reflect.Value{reflect.ValueOf(c)})
+
+	if result[1].Interface() != nil {
+		//errMsg := map[string]string{
+		//	"message": result[1].Interface().(error).Error(),
+		//}
+		return c.JSON(http.StatusInternalServerError, usage.NewErrMSG(result[1].Interface().(error).Error()))
+	}
+	return c.JSON(http.StatusOK, result[0].Interface())
 }
 
 func (listener *AgentPullListener) handlePushMonitoring(c echo.Context) error {
